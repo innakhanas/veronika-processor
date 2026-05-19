@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/processor.js": {
+      "maxDuration": 60
+    }
+  }
+}
