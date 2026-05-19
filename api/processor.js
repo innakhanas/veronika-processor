@@ -107,30 +107,44 @@ export default async function handler(req, res) {
 
     const finalReply = reply || "Дякуємо! Вероніка відповість найближчим часом 🌿";
 
+    // Зберігаємо в БД
     await supabase
       .from("messages")
       .update({ response: finalReply, status: "ai_handled" })
       .eq("id", message_id);
 
-    console.log("🔄 Відправляємо через ManyChat...");
-    const mcRes = await fetch("https://api.manychat.com/fb/sending/sendContent", {
+    // 1. Зберігаємо відповідь в атрибут ManyChat
+    console.log("🔄 Зберігаємо в ManyChat атрибут...");
+    const fieldRes = await fetch("https://api.manychat.com/fb/subscriber/setCustomField", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${MANYCHAT_API_KEY}`,
       },
       body: JSON.stringify({
-        subscriber_id,
-        data: {
-          version: "v2",
-          content: {
-            messages: [{ type: "text", text: finalReply }],
-          },
-        },
+        subscriber_id: subscriber_id,
+        field_id: 14605386,
+        field_value: finalReply,
+      }),
+    });
+    const fieldData = await fieldRes.json();
+    console.log("✅ Custom field:", JSON.stringify(fieldData));
+
+    // 2. Запускаємо flow
+    console.log("🔄 Запускаємо flow...");
+    const mcRes = await fetch("https://api.manychat.com/fb/sending/sendFlow", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${MANYCHAT_API_KEY}`,
+      },
+      body: JSON.stringify({
+        subscriber_id: subscriber_id,
+        flow_ns: "content20260519103348_057805",
       }),
     });
     const mcData = await mcRes.json();
-    console.log("✅ ManyChat:", JSON.stringify(mcData));
+    console.log("✅ ManyChat flow:", JSON.stringify(mcData));
 
     return res.status(200).json({ status: "ok" });
 
